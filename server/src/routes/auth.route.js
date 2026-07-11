@@ -4,6 +4,7 @@ import { authController } from "../controllers/auth..controller.js"
 const authRoute = express.Router()
 
 authRoute.post("/register" , authController.register)
+authRoute.post("/otp" , authController.verifyOtp)
 
 
 export default authRoute
