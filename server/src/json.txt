@@ -1,0 +1,42 @@
+[
+  {
+    "name": "Rahim Uddin",
+    "email": "rahim@example.com",
+    "phone": "+8801712345671",
+    "nid": "19912678901234567",
+    "password": "Rahim@123",
+    "role": "customer"
+  },
+  {
+    "name": "Karim Hasan",
+    "email": "karim@example.com",
+    "phone": "+8801812345672",
+    "nid": "19923678901234568",
+    "password": "Karim@123",
+    "role": "customer"
+  },
+  {
+    "name": "Nusrat Jahan",
+    "email": "nusrat@example.com",
+    "phone": "+8801912345673",
+    "nid": "19934678901234569",
+    "password": "Nusrat@123",
+    "role": "customer"
+  },
+  {
+    "name": "Sakib Ahmed",
+    "email": "sakib@example.com",
+    "phone": "+8801612345674",
+    "nid": "19945678901234570",
+    "password": "Sakib@123",
+    "role": "owner"
+  },
+  {
+    "name": "Tanvir Islam",
+    "email": "tanvir@example.com",
+    "phone": "+8801512345675",
+    "nid": "19956678901234571",
+    "password": "Tanvir@123",
+    "role": "owner"
+  }
+]

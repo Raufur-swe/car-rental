@@ -56,7 +56,7 @@ export const loginLimit = createAuthLimiter({
 })
 
 export const otpLimit = createAuthLimiter({
-    windowMs : 15 *60 *1000 ,
+    windowMs : 10 *60 *1000 ,
     max : 5 ,
     prefix : "otp",
     message : "to many requiest , try after 15 minutes",
