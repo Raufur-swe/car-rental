@@ -95,6 +95,9 @@ export const authController = {
                 }
             }
 
+            
+
+
             // if the otp is already sent and not expired, return an error
             const pendingRegistration = await redisClient.exists(`register:${phone}`);
 
@@ -106,6 +109,8 @@ export const authController = {
             }
 
             // genarate otp
+           // console.log("Register Password:", password);
+
             const otp = crypto.randomInt(100000, 999999).toString();
             const otpHashed = crypto.createHash("sha256").update(otp).digest("hex")
 
@@ -189,6 +194,8 @@ export const authController = {
             }
 
             const data = JSON.parse(registerData);
+            
+            //console.log("Redis Password:", data.password);
 
             // max attepts
             if (data.attempts >= 5) {
@@ -248,6 +255,15 @@ export const authController = {
             }
             // create user
            
+//            console.log("Password from Redis:", JSON.stringify(data.password));
+//            console.log("Password:", JSON.stringify(data.password));
+// console.log("Length:", data.password.length);
+
+const testHash = await bcrypt.hash(data.password, 12);
+
+console.log(
+    await bcrypt.compare(data.password, testHash)
+);
 
             const user = await User.create(
                 [
@@ -398,15 +414,22 @@ export const authController = {
         }
 
         
+// console.log("DB Phone:", user.phone);
+// console.log("Request Phone:", phone);
+// console.log("DB Password Hash:", user.password);
+// console.log("Request Password:", password);
 
 
-console.log(user);
-console.log(user.password);
-console.log(password);
 
 const isPassword = await user.comparePassword(password);
+if (!isPassword) {
+            return res.status(401).json({
+                success: false,
+                message: "invalid credentials"
+            })
+        }
 
-console.log(isPassword);
+//console.log("Matched:", isPassword);
 
         const accessToken = generateAccessToken({
             id: user._id.toString(),

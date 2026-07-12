@@ -38,5 +38,13 @@
     "nid": "19956678901234571",
     "password": "Tanvir@123",
     "role": "owner"
-  }
+  },
+  {
+  "name": "Sakib Hasan",
+  "email": "sakib01@example.com",
+  "phone": "+8801812345678",
+  "nid": "19991234567890123",
+  "password": "Sakib@123",
+  "role": "customer"
+}
 ]
