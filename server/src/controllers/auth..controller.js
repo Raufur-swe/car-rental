@@ -94,8 +94,18 @@ export const authController = {
                 }
             }
 
+            // if the otp is already sent and not expired, return an error
+            const pendingRegistration = await redisClient.exists(`register:${phone}`);
+
+            if (pendingRegistration) {
+                return res.status(429).json({
+                    success: false,
+                    message: "OTP already sent. Please wait until it expires.",
+                });
+            }
+
             // genarate otp
-            const otp = Math.floor(100000 + Math.random() * 900000).toString()
+            const otp = crypto.randomInt(100000, 999999).toString();
             const otpHashed = crypto.createHash("sha256").update(otp).digest("hex")
 
             // save registration into redis
@@ -197,9 +207,16 @@ export const authController = {
             if (otpHashed !== data.otpHashed) {
                 data.attempts += 1;
 
-                await redisClient.set(`register:${phone}`, JSON.stringify(data), {
-                    EX: 300
-                });
+                
+                const ttl = await redisClient.ttl(`register:${phone}`);
+
+                await redisClient.set(
+                    `register:${phone}`,
+                    JSON.stringify(data),
+                    {
+                        EX: ttl > 0 ? ttl : 300
+                    }
+                );
                 await session.abortTransaction();
 
                 return res.status(400).json({
@@ -207,7 +224,28 @@ export const authController = {
                     message: "Invalid OTP."
                 });
             }
+
+            // if the verification is successful, check if the user already exists in the database
+            const exists = await User.findOne({
+                $or: [
+                    { email: data.email },
+                    { phone: data.phone },
+                    { nid: data.nid },
+                ],
+            }).session(session);
+
+            if (exists) {
+                await session.abortTransaction();
+
+                await redisClient.del(`register:${phone}`);
+
+                return res.status(409).json({
+                    success: false,
+                    message: "Account already exists.",
+                });
+            }
             // create user
+            const hashedPassword = await bcrypt.hash(data.password, 12);
 
             const user = await User.create(
                 [
@@ -217,6 +255,7 @@ export const authController = {
                         phone: data.phone,
                         nid: data.nid,
                         role: data.role,
+                        password: hashedPassword,
                         isVerified: true
                     }
                 ],
@@ -320,65 +359,66 @@ export const authController = {
         }
     }),
 
-    login: Trycatch(async(req,res)=>{
-        let {phone , password} = req.body
-        if(!phone || !password){
+    login: Trycatch(async (req, res) => {
+        let { phone, password } = req.body
+        if (!phone || !password) {
             return res.status(400).json({
-                success : false,
-                message  : "Email and password are required"
+                success: false,
+                message: "phone and password are required"
             })
         }
 
-        const user = await User.findOne({phone}).select("+password");
+        const user = await User.findOne({ phone }).select("+password");
 
         if (!user) {
             return res.status(401).json({
-                success : false,
-                message : "no such user on this account"
+                success: false,
+                message: "no such user on this account"
             })
         }
 
 
         if (user.isBlocked) {
             return res.status(403).json({
-                success : false,
-                message : "your account has been blocked"
+                success: false,
+                message: "your account has been blocked"
             })
         }
 
-        if(!user.isVerified){
+        if (!user.isVerified) {
             return res.status(403).json({
                 success: false,
-                message : "user unvarified"
+                message: "user unvarified"
             })
         }
 
-        const isPassword = await bcrypt.compare(password , user.password)
+        const isPassword = await bcrypt.compare(password, user.password)
 
-        if(!isPassword){
+        if (!isPassword) {
             return res.status(401).json({
-                success : false,
-                message : "invalid credantials"
+                success: false,
+                message: "invalid credantials"
             })
         }
 
         const accessToken = generateAccessToken({
-            id : user._id.toString(),
-            role : user.role,
+            id: user._id.toString(),
+            role: user.role
+
         })
 
         const refreshToekn = generateRefreshToken({
-            id : user._id.toString(),
+            id: user._id.toString(),
         })
 
         // hash refresh token
 
-        const hashedRefreshToken = await bcrypt.hash(refreshToekn , 10)
+        const hashedRefreshToken = await bcrypt.hash(refreshToekn, 10)
 
         // set on redis
 
-        await redisClient.set(`refresh:${user._id}` , hashedRefreshToken ,
-        {EX : 7 * 24 * 60})
+        await redisClient.set(`refresh:${user._id}`, hashedRefreshToken,
+            { EX: 7 * 24 * 60 * 60 })
 
         // set cookie
 
@@ -398,109 +438,123 @@ export const authController = {
         user.password = undefined
 
         return res.status(200).json({
-            success : true,
-            message : "login success",
+            success: true,
+            message: "login success",
             user
         })
     }),
 
     // refresh token
 
-    refreshToekn : Trycatch(async(req , res)=>{
-       try {
-         const oldRefreshToken = req.cookies?.refreshToekn;
-        if(!oldRefreshToken){
-            return res.status(401).json({
-                success : false ,
-                message : "token missing"
+    refreshToekn: Trycatch(async (req, res) => {
+        try {
+            const oldRefreshToken = req.cookies?.refreshToken;
+            if (!oldRefreshToken) {
+                return res.status(401).json({
+                    success: false,
+                    message: "token missing"
+                })
+            }
+
+            const decode = verifyRefreshToken(oldRefreshToken);
+
+            const storedToken = await redisClient.get(
+                `refresh:${decode.id}`
+            )
+
+            if (!storedToken) {
+                return res.status(401).json({
+                    success: false,
+                    message: "Session expired"
+                })
+            }
+
+            // reuse detaction
+
+            const isMatched = await bcrypt.compare(oldRefreshToken, storedToken)
+
+            if (!isMatched) {
+                await redisClient.del(`refresh:${decode.id}`);
+                res.clearCookie("refreshToken");
+
+                return res.status(403).json({
+                    success: false,
+                    message: "token reuse detected"
+                })
+            }
+
+            // genarate new token
+
+            const newAccessToken = generateAccessToken({
+                id: decode.id,
+                
             })
-        }
 
-        const decode = verifyRefreshToken(oldRefreshToken);
-
-        const storedToken = await redisClient.get(
-            `refresh:${decode.id}`
-        )
-
-        if(!storedToken){
-            return res.status(401).json({
-                success : false,
-                message : "Session expired"
+            const newRefreshToken = generateRefreshToken({
+                id: decode.id,
+                role: decode.role,
             })
-        }
 
-        // reuse detaction
+            // rotate refreshTken
+            const hashedRefreshToken = await bcrypt.hash(newRefreshToken, 10);
 
-        if(storedToken !== oldRefreshToken){
-            await redisClient.del(`refresh:${decode.id}`);
+            await redisClient.set(
+                `refresh:${decode.id}`,
+                hashedRefreshToken,
+                {
+                    EX: 60 * 60 * 24 * 7,
+                }
+            )
+
+            //update cookie
+
+            res.cookie(
+                "accessToken",
+                newAccessToken,
+                accessCookieOption
+            );
+
+            res.cookie(
+                "refreshToken",
+                newRefreshToken,
+                refreshCookieOptions
+            )
+
+            return res.status(200).json({
+                success: true,
+                message: " token refresh successfully"
+            });
+        } catch (error) {
             res.clearCookie("refreshToken");
 
-            return res.status(403).json({
-                success : false ,
-                message : "token reuse detected . login again"
-            })
+            return res.status(401).json({
+                success: false,
+                message: "Invalid Refresh Token",
+            });
         }
-
-        // genarate new token
-
-        const newAccessToken = generateAccessToken({
-            id : decode.id,
-            role : decode.role,
-        })
-
-        const newRefreshToken = generateRefreshToken({
-            id : decode.id,
-            role : decode.role,
-        })
-
-        // rotate refreshTken
-
-        await redisClient.set(
-            `refresh:${decode.id}`,
-            newRefreshToken,
-            {
-                EX : 60 * 60 *24 * 7,
-            }
-        )
-
-        //update cookie
-
-        refreshCookieOptions(res , newRefreshToken)
-
-         return res.status(200).json({
-            success: true,
-            message : " token refresh successfully"
-        });
-       } catch (error) {
-           res.clearCookie("refreshToken");
-
-        return res.status(401).json({
-            success: false,
-            message: "Invalid Refresh Token",
-        });
-       }
     }),
 
-    logout : Trycatch(async(req , res)=>{
-         try {
+    logout: Trycatch(async (req, res) => {
+        try {
 
-        const refreshToken = req.cookies?.refreshToken;
+            const refreshToken = req.cookies?.refreshToken;
 
-        if (refreshToken) {
+            if (refreshToken) {
 
-            const decoded = verifyRefreshToken(refreshToken);
+                const decoded = verifyRefreshToken(refreshToken);
 
-            await redisClient.del(`refresh:${decoded.id}`);
+                await redisClient.del(`refresh:${decoded.id}`);
 
-        }
+            }
 
-    } catch (error) {}
+        } catch (error) { }
 
-    res.clearCookie("refreshToken");
+        res.clearCookie("refreshToken");
+        res.clearCookie("accessToken");
 
-    return res.status(200).json({
-        success: true,
-        message: "Logout Successful",
-    });
+        return res.status(200).json({
+            success: true,
+            message: "Logout Successful",
+        });
     })
 }
