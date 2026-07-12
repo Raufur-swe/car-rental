@@ -9,19 +9,13 @@ import redisClient from "../config/redis.js";
 import { accessCookieOption, refreshCookieOptions } from "../utils/cookie.js";
 import client from "../utils/sms.js";
 import crypto from "crypto"
+import bcrypt from "bcrypt"
 
 
 export const authController = {
     register: Trycatch(async (req, res) => {
-
-
-        //transecction start
         try {
-
-            // console.log("Transaction Started");
-
             let { name, email, phone, nid, password, role } = req.body;
-
 
             // Normalize Input
             // ==========================
@@ -80,8 +74,6 @@ export const authController = {
             })
 
             if (existingUser) {
-
-
                 if (existingUser.email === email) {
                     return res.status(409).json({
                         success: false,
@@ -106,7 +98,6 @@ export const authController = {
             const otp = Math.floor(100000 + Math.random() * 900000).toString()
             const otpHashed = crypto.createHash("sha256").update(otp).digest("hex")
 
-
             // save registration into redis
 
             await redisClient.set(
@@ -126,7 +117,7 @@ export const authController = {
                 }
             )
 
-            // Development e console e OTP dekhao
+            // Development e console e OTP show
             console.log("================================");
             console.log("OTP:", otp);
             console.log("================================");
@@ -145,12 +136,12 @@ export const authController = {
                 message: "OTP sent successfully."
             });
         } catch (error) {
-            console.error(error);
-
+            //console.error(error);
             return res.status(500).json({
                 success: false,
-                message: error.message,
-                stack: error.stack
+                //message: error.message,
+                message: "internal server error"
+                //stack: error.stack
             });
         }
     }),
@@ -184,6 +175,7 @@ export const authController = {
                     message: "OTP expired."
                 });
             }
+
             const data = JSON.parse(registerData);
 
             // max attepts
@@ -224,7 +216,6 @@ export const authController = {
                         email: data.email,
                         phone: data.phone,
                         nid: data.nid,
-                        password: data.password,
                         role: data.role,
                         isVerified: true
                     }
@@ -269,12 +260,13 @@ export const authController = {
             });
 
             // save refresh token
+            const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
 
             await redisClient.set(
 
                 `refresh:${newUser._id}`,
 
-                refreshToken,
+                hashedRefreshToken,
 
                 {
 
@@ -283,7 +275,6 @@ export const authController = {
                 }
 
             );
-
             // cookies
 
             res.cookie(
@@ -327,5 +318,89 @@ export const authController = {
         } finally {
             await session.endSession();
         }
+    }),
+
+    login: Trycatch(async(req,res)=>{
+        let {phone , password} = req.body
+        if(!phone || !password){
+            return res.status(400).json({
+                success : false,
+                message  : "Email and password are required"
+            })
+        }
+
+        const user = await User.findOne({phone}).select("+password");
+
+        if (!user) {
+            return res.status(401).json({
+                success : false,
+                message : "no such user on this account"
+            })
+        }
+
+
+        if (user.isBlocked) {
+            return res.status(403).json({
+                success : false,
+                message : "your account has been blocked"
+            })
+        }
+
+        if(!user.isVerified){
+            return res.status(403).json({
+                success: false,
+                message : "user unvarified"
+            })
+        }
+
+        const isPassword = await bcrypt.compare(password , user.password)
+
+        if(!isPassword){
+            return res.status(401).json({
+                success : false,
+                message : "invalid credantials"
+            })
+        }
+
+        const accessToken = generateAccessToken({
+            id : user._id.toString(),
+            role : user.role,
+        })
+
+        const refreshToekn = generateRefreshToken({
+            id : user._id.toString(),
+        })
+
+        // hash refresh token
+
+        const hashedRefreshToken = await bcrypt.hash(refreshToekn , 10)
+
+        // set on redis
+
+        await redisClient.set(`refresh:${user._id}` , hashedRefreshToken ,
+        {EX : 7 * 24 * 60})
+
+        // set cookie
+
+        res.cookie(
+            "accessToken",
+            accessToken,
+            accessCookieOption
+        );
+
+        res.cookie(
+            "refreshToken",
+            refreshToekn,
+            refreshCookieOptions
+        )
+
+        // hide password
+        user.password = undefined
+
+        return res.status(200).json({
+            success : true,
+            message : "login success",
+            user
+        })
     })
 }

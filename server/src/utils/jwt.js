@@ -17,12 +17,12 @@ export const generateRefreshToken = (payload)=>{
 
 // verify access token
 
-const verifyAccessToken = (token)=>{
+export const verifyAccessToken = (token)=>{
     return jwt.verify(token , process.env.ACCESS_TOKEN)
 }
 
 // verify refresh token
 
-const verifyRefreshToken = (token)=>{
+export const verifyRefreshToken = (token)=>{
     return jwt.verify(token , process.env.REFRESH_TOKEN)
 }
