@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 import Trycatch from "../middleware/TryCatch.js";
 import User from "../model/user.model.js";
 import Owner from "../model/owner.model.js";
-import { generateAccessToken, generateRefreshToken } from "../utils/jwt.js";
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
 import redisClient from "../config/redis.js";
 import { accessCookieOption, refreshCookieOptions } from "../utils/cookie.js";
 import client from "../utils/sms.js";
@@ -402,5 +402,105 @@ export const authController = {
             message : "login success",
             user
         })
+    }),
+
+    // refresh token
+
+    refreshToekn : Trycatch(async(req , res)=>{
+       try {
+         const oldRefreshToken = req.cookies?.refreshToekn;
+        if(!oldRefreshToken){
+            return res.status(401).json({
+                success : false ,
+                message : "token missing"
+            })
+        }
+
+        const decode = verifyRefreshToken(oldRefreshToken);
+
+        const storedToken = await redisClient.get(
+            `refresh:${decode.id}`
+        )
+
+        if(!storedToken){
+            return res.status(401).json({
+                success : false,
+                message : "Session expired"
+            })
+        }
+
+        // reuse detaction
+
+        if(storedToken !== oldRefreshToken){
+            await redisClient.del(`refresh:${decode.id}`);
+            res.clearCookie("refreshToken");
+
+            return res.status(403).json({
+                success : false ,
+                message : "token reuse detected . login again"
+            })
+        }
+
+        // genarate new token
+
+        const newAccessToken = generateAccessToken({
+            id : decode.id,
+            role : decode.role,
+        })
+
+        const newRefreshToken = generateRefreshToken({
+            id : decode.id,
+            role : decode.role,
+        })
+
+        // rotate refreshTken
+
+        await redisClient.set(
+            `refresh:${decode.id}`,
+            newRefreshToken,
+            {
+                EX : 60 * 60 *24 * 7,
+            }
+        )
+
+        //update cookie
+
+        refreshCookieOptions(res , newRefreshToken)
+
+         return res.status(200).json({
+            success: true,
+            message : " token refresh successfully"
+        });
+       } catch (error) {
+           res.clearCookie("refreshToken");
+
+        return res.status(401).json({
+            success: false,
+            message: "Invalid Refresh Token",
+        });
+       }
+    }),
+
+    logout : Trycatch(async(req , res)=>{
+         try {
+
+        const refreshToken = req.cookies?.refreshToken;
+
+        if (refreshToken) {
+
+            const decoded = verifyRefreshToken(refreshToken);
+
+            await redisClient.del(`refresh:${decoded.id}`);
+
+        }
+
+    } catch (error) {}
+
+    res.clearCookie("refreshToken");
+
+    return res.status(200).json({
+        success: true,
+        message: "Logout Successful",
+    });
     })
 }

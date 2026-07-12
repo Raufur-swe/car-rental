@@ -2,10 +2,23 @@
 
 import rateLimit from "express-rate-limit"
 import RedisStore from "rate-limit-redis"
-import redisClient from "../config/redis"
+import redisClient from "../config/redis.js"
 import crypto from "crypto"
+import { ipKeyGenerator } from "express-rate-limit"
 
-const createAuthLimiter = ({ windowMs, max, prefix, message }) => {
+const createStore = (prefix) => {
+    if (!redisClient.isReady) {
+        console.warn("⚠ Redis is not ready. Using Memory Store.");
+        return undefined; // express-rate-limit এর default Memory Store
+    }
+
+    return new RedisStore({
+        prefix,
+        sendCommand: (...args) => redisClient.sendCommand(args),
+    });
+};
+
+const createAuthLimiter = ({ windowMs, max, prefix, message , skipSuccessfulRequests = false }) => {
     return rateLimit({
         windowMs, max,
         standardHeaders: true,
@@ -13,14 +26,12 @@ const createAuthLimiter = ({ windowMs, max, prefix, message }) => {
 
         //redis store
 
-        store: new RedisStore({
-            sendCommand: (...arg) => redisClient.sendCommand(arg),
-            prefix
-        }),
+        store: createStore(prefix),
+        skipSuccessfulRequests,
 
         keyGenerator: (req) => {
-            const ip = req.ip;
-            const email = req.body?.email?.trim().toLoweerCase() || "unlnown"
+            const ip = ipKeyGenerator(req);
+            const email = req.body?.email?.trim().toLoweerCase() || "unknown"
 
             const emailHash = crypto.createHash("sha256").update(email).digest("hex");
 
@@ -51,8 +62,9 @@ export const otpLimit = createAuthLimiter({
     message : "to many requiest , try after 15 minutes",
 })
 
-const refreshTokenLimit = createAuthLimiter({
+export const refreshTokenLimit = createAuthLimiter({
     windowMs : 15 * 60 * 1000,
     max : 15 ,
+    prefix : "refresh",
     message : "to many requiest , try after 15 minutes"
 })
