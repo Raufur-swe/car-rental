@@ -31,7 +31,7 @@ const createAuthLimiter = ({ windowMs, max, prefix, message , skipSuccessfulRequ
 
         keyGenerator: (req) => {
             const ip = ipKeyGenerator(req);
-            const email = req.body?.email?.trim().toLoweerCase() || "unknown"
+            const email = req.body?.email?.trim().toLowerCase() || "unknown"
 
             const emailHash = crypto.createHash("sha256").update(email).digest("hex");
 

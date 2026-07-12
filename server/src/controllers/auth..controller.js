@@ -24,6 +24,7 @@ export const authController = {
             email = email?.trim().toLowerCase();
             phone = phone?.trim();
             nid = nid?.trim();
+            password = password?.trim();
             role = role?.trim().toLowerCase();
 
             // basic validation
@@ -164,6 +165,7 @@ export const authController = {
 
             const { phone, otp } = req.body
 
+
             if (!phone || !otp) {
 
                 await session.abortTransaction();
@@ -207,7 +209,7 @@ export const authController = {
             if (otpHashed !== data.otpHashed) {
                 data.attempts += 1;
 
-                
+
                 const ttl = await redisClient.ttl(`register:${phone}`);
 
                 await redisClient.set(
@@ -245,7 +247,7 @@ export const authController = {
                 });
             }
             // create user
-            const hashedPassword = await bcrypt.hash(data.password, 12);
+           
 
             const user = await User.create(
                 [
@@ -255,7 +257,7 @@ export const authController = {
                         phone: data.phone,
                         nid: data.nid,
                         role: data.role,
-                        password: hashedPassword,
+                        password: data.password,
                         isVerified: true
                     }
                 ],
@@ -361,6 +363,8 @@ export const authController = {
 
     login: Trycatch(async (req, res) => {
         let { phone, password } = req.body
+        phone = phone?.trim();
+        password = password?.trim();
         if (!phone || !password) {
             return res.status(400).json({
                 success: false,
@@ -369,6 +373,7 @@ export const authController = {
         }
 
         const user = await User.findOne({ phone }).select("+password");
+        
 
         if (!user) {
             return res.status(401).json({
@@ -392,14 +397,16 @@ export const authController = {
             })
         }
 
-        const isPassword = await bcrypt.compare(password, user.password)
+        
 
-        if (!isPassword) {
-            return res.status(401).json({
-                success: false,
-                message: "invalid credantials"
-            })
-        }
+
+console.log(user);
+console.log(user.password);
+console.log(password);
+
+const isPassword = await user.comparePassword(password);
+
+console.log(isPassword);
 
         const accessToken = generateAccessToken({
             id: user._id.toString(),
@@ -407,13 +414,13 @@ export const authController = {
 
         })
 
-        const refreshToekn = generateRefreshToken({
+        const refreshToken = generateRefreshToken({
             id: user._id.toString(),
         })
 
         // hash refresh token
 
-        const hashedRefreshToken = await bcrypt.hash(refreshToekn, 10)
+        const hashedRefreshToken = await bcrypt.hash(refreshToken, 10)
 
         // set on redis
 
@@ -430,7 +437,7 @@ export const authController = {
 
         res.cookie(
             "refreshToken",
-            refreshToekn,
+            refreshToken,
             refreshCookieOptions
         )
 
@@ -487,7 +494,7 @@ export const authController = {
 
             const newAccessToken = generateAccessToken({
                 id: decode.id,
-                
+
             })
 
             const newRefreshToken = generateRefreshToken({

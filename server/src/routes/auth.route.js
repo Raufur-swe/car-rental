@@ -8,6 +8,7 @@ authRoute.post("/register" , authController.register)
 authRoute.post("/otp" , otpLimit  ,authController.verifyOtp)
 authRoute.post("/login" , loginLimit ,authController.login )
 authRoute.post("/refresh" , refreshTokenLimit , authController.refreshToekn)
+authRoute.post("/logout" , authController.logout)
 
 
 export default authRoute
