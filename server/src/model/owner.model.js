@@ -17,7 +17,7 @@ const ownerSchema = new mongoose.Schema({
       maxlength: 100,
     },
 
-    tradeLicense: {
+    drivingLicense: {
       type: String,
       default: "",
       trim: true,
@@ -33,10 +33,13 @@ const ownerSchema = new mongoose.Schema({
     // Verification
     verificationStatus: {
       type: String,
-      enum: ["pending", "approved", "rejected"],
-      default: "pending",
+      enum: ["not-submitted","pending", "approved", "rejected"],
+      default: "not-sbmitted",
       index: true,
     },
+
+
+    verifiedAt: Date,
 
     // Dashboard Statistics
     totalCars: {
