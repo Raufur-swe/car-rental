@@ -17,11 +17,17 @@ const ownerSchema = new mongoose.Schema({
       maxlength: 100,
     },
 
-    drivingLicense: {
-      type: String,
-      default: "",
-      trim: true,
+  drivingLicense: {
+    number: {
+        type: String,
+        default: ""
     },
+    document: {
+        type: String,
+        default: ""
+    },
+    submittedAt: Date
+},
 
     bio: {
       type: String,
@@ -33,8 +39,8 @@ const ownerSchema = new mongoose.Schema({
     // Verification
     verificationStatus: {
       type: String,
-      enum: ["not-submitted","pending", "approved", "rejected"],
-      default: "not-sbmitted",
+      enum: ["notSubmitted","pending", "approved", "rejected"],
+      default: "notSubmitted",
       index: true,
     },
 

@@ -1,7 +1,7 @@
-import jwt from " jsonwebtoken";
-import User from "../model/user.model";
-import { verifyAccessToken } from "../utils/jwt";
-import Trycatch from "./TryCatch";
+import jwt from "jsonwebtoken";
+import User from "../model/user.model.js";
+import { verifyAccessToken } from "../utils/jwt.js";
+import Trycatch from "./TryCatch.js";
 
 const authMiddleware = Trycatch(async (req, res, next) => {
     try {
@@ -13,7 +13,7 @@ const authMiddleware = Trycatch(async (req, res, next) => {
         }
 
         // authorization header
-        if (!accessToken && req.headers.authorization?.startwith("Bearer ")) {
+        if (!accessToken && req.headers.authorization?.startswith("Bearer ")) {
             accessToken = req.headers.authorization.split(" ")[1]
         }
 
@@ -33,36 +33,37 @@ const authMiddleware = Trycatch(async (req, res, next) => {
             });
         }
 
-        const user = await User.findById(decode.id).select("_id role isBlooked isverified")
+        const user = await User.findById(decode.id)
+            .select("_id role isBlocked isVerified");
 
         if (!user) {
             return res.status(401).json({
                 success: false,
                 message: "User not found.",
             });
-
-            if (!user.isBlocked) {
-                return res.status(403).json({
-                    success: false,
-                    message: "Your account has been blocked.",
-                });
-            }
-
-            if (!user.isVerified) {
-                return res.status(403).json({
-                    success: false,
-                    message: "Please verify your account.",
-                });
-            }
-
-            req.user = {
-                id: user._id,
-                role: user.role
-            }
-
-
-            next()
         }
+
+        if (user.isBlocked) {
+            return res.status(403).json({
+                success: false,
+                message: "Your account has been blocked.",
+            });
+        }
+
+        if (!user.isVerified) {
+            return res.status(403).json({
+                success: false,
+                message: "Please verify your account.",
+            });
+        }
+
+        req.user = {
+            id: user._id,
+            role: user.role,
+        };
+
+        next();
+
     } catch (error) {
         if (error instanceof jwt.TokenExpiredError) {
             return res.status(401).json({

@@ -10,14 +10,14 @@ const authorized = (...roles) => {
             })
         }
 
-        if(!roles.includes(req.user.role)){
-             return res.status(403).json({
-        success: false,
-        message: "Permission denied.",
-      });
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({
+                success: false,
+                message: "Permission denied.",
+            });
         }
         next()
     }
 }
 
-export default authorized()
+export default authorized
