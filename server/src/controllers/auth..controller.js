@@ -10,6 +10,7 @@ import { accessCookieOption, refreshCookieOptions } from "../utils/cookie.js";
 import client from "../utils/sms.js";
 import crypto from "crypto"
 import bcrypt from "bcrypt"
+import customer from "../model/customer.model.js";
 
 
 export const authController = {
@@ -281,6 +282,17 @@ console.log(
             );
 
             const newUser = user[0];
+            
+            if (newUser.role === "customer") {
+
+    await customer.create(
+        [{
+            user:newUser._id
+        }],
+        { session }
+    );
+
+}
 
             // owner profile
 

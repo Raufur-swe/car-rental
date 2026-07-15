@@ -1,3 +1,4 @@
+import redisClient from "../config/redis.js";
 import Trycatch from "../middleware/TryCatch.js";
 import carModel from "../model/car.model.js";
 import Owner from "../model/owner.model.js";
@@ -127,6 +128,8 @@ export const verificationController = {
                 message: "Car not found.",
             });
         }
+
+        await redisClient.del(`ownerCars:${car.owner}`);
          await UpdateOwner(car.owner);
 
         res.json({
