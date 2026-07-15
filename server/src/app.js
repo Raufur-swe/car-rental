@@ -3,6 +3,7 @@ import dns from "dns"
 import authRoute from "./routes/auth.route.js";
 import cookieParser from "cookie-parser";
 import varifyRoute from "./routes/verification.route.js";
+import carRoute from "./routes/car.route.js";
 
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
@@ -15,6 +16,9 @@ app.use(cookieParser())
 // auth route
 app.use("/api/auth" , authRoute)
 //verify route
-app.use("/api/verify" , varifyRoute)
+app.use("/api/verify" , varifyRoute);
+
+// cars
+app.use("/api/car", carRoute)
 
 export default app;

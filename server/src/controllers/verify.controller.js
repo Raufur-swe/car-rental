@@ -1,5 +1,7 @@
 import Trycatch from "../middleware/TryCatch.js";
+import carModel from "../model/car.model.js";
 import Owner from "../model/owner.model.js";
+import { UpdateOwner } from "../utils/ownerUpdater.js";
 
 
 export const verificationController = {
@@ -9,11 +11,11 @@ export const verificationController = {
         const { drivingLicenseNumber } = req.body
 
         if (!drivingLicenseNumber) {
-    return res.status(400).json({
-        success: false,
-        message: "Driving license number is required."
-    });
-}
+            return res.status(400).json({
+                success: false,
+                message: "Driving license number is required."
+            });
+        }
 
         // find owner
 
@@ -45,13 +47,13 @@ export const verificationController = {
         // owner.drivingLicense.submittedAt = new Date()
 
         if (owner.verificationStatus === "approved") {
-    return res.status(400).json({
-        success: false,
-        message: "Owner already verified."
-    });
-}
+            return res.status(400).json({
+                success: false,
+                message: "Owner already verified."
+            });
+        }
 
-owner.verificationStatus = "pending";
+        owner.verificationStatus = "pending";
 
         await owner.save()
 
@@ -93,20 +95,44 @@ owner.verificationStatus = "pending";
 
         const owner = await Owner.findById(req.params.id);
 
-        
-if (!owner) {
-    return res.status(404).json({
-        success: false,
-        message: "Owner not found."
-    });
-}
 
-owner.verificationStatus = "rejected";
+        if (!owner) {
+            return res.status(404).json({
+                success: false,
+                message: "Owner not found."
+            });
+        }
+
+        owner.verificationStatus = "rejected";
 
         await owner.save();
 
         res.json({
             success: true
+        });
+    }),
+
+    approvedCar: Trycatch(async (req, res) => {
+
+        const { id } = req.params
+        const car = await carModel.findByIdAndUpdate(
+            id,
+            { status: "active" },
+            { new: true }
+        )
+
+        if (!car) {
+            return res.status(404).json({
+                success: false,
+                message: "Car not found.",
+            });
+        }
+         await UpdateOwner(car.owner);
+
+        res.json({
+            success: true,
+            message: "Car approved successfully.",
+            car,
         });
     })
 }
