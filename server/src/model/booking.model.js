@@ -89,10 +89,13 @@ const bookingSchema = new mongoose.Schema(
       default: "",
     },
 
-    cancelledReason: {
-      type: String,
-      default: "",
-    },
+    bookingType: {
+    type: String,
+    enum: ["upcoming", "running", "completed", "cancelled"],
+    default: "upcoming",
+    index: true,
+},
+
 
     completedAt: Date,
   },

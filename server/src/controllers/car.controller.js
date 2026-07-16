@@ -175,7 +175,7 @@ export const carController = {
         });
     }
     // // Update only provided fields
-    Object.assign(car , req.body)
+    Object.assign(cars , req.body)
     await cars.save()
 
     await redisClient.del(`ownerCars:${userId}`);
@@ -184,7 +184,7 @@ export const carController = {
        return res.status(200).json({
         success: true,
         message: "Car updated successfully.",
-        car
+        cars
     });
     }),
 

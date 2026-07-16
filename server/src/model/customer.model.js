@@ -33,6 +33,10 @@ const customerSchema = new Schema(
       default: 0,
       min: 0,
     },
+    activeBookings: {
+    type: Number,
+    default: 0
+},
 
     totalSpent: {
       type: Number,

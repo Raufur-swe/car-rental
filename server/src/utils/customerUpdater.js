@@ -1,31 +1,11 @@
 import Booking from "../model/booking.model.js";
-import Car from "../model/car.model.js";
-import Owner from "../model/owner.model.js";
+import Customer from "../model/customer.model.js";
 
-export const UpdateOwner = async (userId) => {
-  // Car Statistics
-  const [totalCars, activeCars, inactiveCars] = await Promise.all([
-    Car.countDocuments({
-      owner: userId,
-      status: { $ne: "deleted" },
-    }),
-
-    Car.countDocuments({
-      owner: userId,
-      status: "active",
-    }),
-
-    Car.countDocuments({
-      owner: userId,
-      status: "inactive",
-    }),
-  ]);
-
-  // Booking Statistics
+export const updateCustomer = async (userId) => {
   const bookingStats = await Booking.aggregate([
     {
       $match: {
-        owner: userId,
+        customer: userId,
       },
     },
 
@@ -73,7 +53,7 @@ export const UpdateOwner = async (userId) => {
           },
         },
 
-        totalRevenue: {
+        totalSpent: {
           $sum: {
             $cond: [
               {
@@ -97,50 +77,16 @@ export const UpdateOwner = async (userId) => {
 
   const stats = bookingStats[0] || {};
 
-  // Monthly Revenue
-  const firstDay = new Date();
-  firstDay.setDate(1);
-  firstDay.setHours(0, 0, 0, 0);
-
-  const monthlyRevenue = await Booking.aggregate([
-    {
-      $match: {
-        owner: userId,
-        status: "completed",
-        paymentStatus: "paid",
-        completedAt: {
-          $gte: firstDay,
-        },
-      },
-    },
-
-    {
-      $group: {
-        _id: null,
-
-        revenue: {
-          $sum: "$totalPrice",
-        },
-      },
-    },
-  ]);
-
-  await Owner.findOneAndUpdate(
+  await Customer.findOneAndUpdate(
     {
       user: userId,
     },
     {
-      totalCars,
-      activeCars,
-      inactiveCars,
-
       totalBookings: stats.totalBookings || 0,
       activeBookings: stats.activeBookings || 0,
       completedBookings: stats.completedBookings || 0,
       cancelledBookings: stats.cancelledBookings || 0,
-
-      totalRevenue: stats.totalRevenue || 0,
-      monthlyRevenue: monthlyRevenue[0]?.revenue || 0,
+      totalSpent: stats.totalSpent || 0,
     },
     {
       new: true,

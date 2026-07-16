@@ -66,6 +66,11 @@ const ownerSchema = new mongoose.Schema({
       min: 0,
     },
 
+    activeBookings: {
+    type: Number,
+    default: 0
+},
+
     totalBookings: {
       type: Number,
       default: 0,
