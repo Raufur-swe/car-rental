@@ -1,9 +1,12 @@
 import mongoose from "mongoose";
 import Trycatch from "../middleware/TryCatch.js";
-import carModel from "../model/car.model";
+import carModel from "../model/car.model.js";
 import Booking from "../model/booking.model.js";
 import { updateCustomer } from "../utils/customerUpdater.js";
 import { UpdateOwner } from "../utils/ownerUpdater.js";
+import Customer from "../model/customer.model.js";
+import Owner from "../model/owner.model.js";
+import redisClient from "../config/redis.js";
 
 export const bookingController = {
 
@@ -13,9 +16,9 @@ export const bookingController = {
         session.startTransaction()
 
         try {
-            const userId = req.user.id,
+            const userId = req.user.id;
 
-            const role = req.user.role
+            const role = req.user.role;
 
             if (role !== "customer") {
 
@@ -194,7 +197,12 @@ export const bookingController = {
                 });
             }
 
+            
+              const totalDays = Math.ceil(
+                (drop - pickup) / (1000 * 60 * 60 * 24)
+            );
             const totalPrice = totalDays * car.rentPerDay;
+          
 
             const booking = await Booking.create([
                 {
@@ -222,7 +230,7 @@ export const bookingController = {
             await Promise.all([
                 updateCustomer(userId),
                 UpdateOwner(car.owner)
-            ])
+            ],{session})
 
             await Promise.all([
                 redisClient.del(`ownerCars:${car.owner}`),
@@ -242,11 +250,11 @@ export const bookingController = {
             });
 
         } catch (error) {
-             await session.abortTransaction();
+            await session.abortTransaction();
 
-    session.endSession();
+            session.endSession();
 
-    throw error;
+            throw error;
         }
     })
 
