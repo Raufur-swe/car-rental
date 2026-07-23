@@ -107,7 +107,7 @@ export const carController = {
 
     // get all cars
 
-    getAllCars: Trycatch(async (req, res) => {
+    myAllCars: Trycatch(async (req, res) => {
 
         const userId = req.user.id;
         const role = req.user.role;

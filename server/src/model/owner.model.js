@@ -4,7 +4,7 @@ import mongoose, { model, Schema } from "mongoose";
 const ownerSchema = new mongoose.Schema({
     user :{
         type : Schema.Types.ObjectId,
-        ref : "User",
+        ref : "user",
         required : true,
         unique : true ,
         index : true

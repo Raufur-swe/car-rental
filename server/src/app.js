@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import varifyRoute from "./routes/verification.route.js";
 import carRoute from "./routes/car.route.js";
 import bookRoute from "./routes/booking.route.js";
+import customerRoute from "./routes/customer.route.js";
 
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
@@ -25,5 +26,9 @@ app.use("/api/car", carRoute)
 // booking
 
 app.use("/api/booking" , bookRoute)
+
+//customer
+
+app.use("/api/customer" , customerRoute)
 
 export default app;

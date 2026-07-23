@@ -6,7 +6,7 @@ import authorized from "../middleware/authorize.middleware.js"
 const carRoute = express.Router()
 
 carRoute.post("/add-car" , authMiddleware, authorized("owner") , carController.addCar)
-carRoute.post("/get-all-car" , authMiddleware, authorized("owner") , carController.getAllCars)
+carRoute.post("/get-all-car" , authMiddleware, authorized("owner") , carController.myAllCars)
 carRoute.post("/update-car" , authMiddleware, authorized("owner") , carController.updateCar)
 carRoute.post("/remove-car" , authMiddleware, authorized("owner") , carController.deleteCar)
 
