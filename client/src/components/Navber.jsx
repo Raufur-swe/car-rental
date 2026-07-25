@@ -55,6 +55,7 @@ export default function Navber() {
   };
 
   return (
+    <>
     <header className="fixed top-5 left-0 z-50 w-full px-5">
       <div className="mx-auto flex max-w-7xl items-center justify-between rounded-2xl border border-white/40 bg-white/55 px-6 py-3 shadow-[0_10px_40px_rgba(0,0,0,.08)] backdrop-blur-xl">
 
@@ -169,5 +170,7 @@ export default function Navber() {
         </div>
       </div>
     </header>
+    <div className="h-28"></div>
+    </>
   );
 }

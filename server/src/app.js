@@ -1,5 +1,6 @@
 import express from "express";
 import dns from "dns"
+import cors from "cors"
 import authRoute from "./routes/auth.route.js";
 import cookieParser from "cookie-parser";
 import varifyRoute from "./routes/verification.route.js";
@@ -10,6 +11,14 @@ import customerRoute from "./routes/customer.route.js";
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
 const app = express();
+
+
+app.use(
+    cors({
+        origin : process.env.CLIENT_URL,
+        credentials : true
+    })
+)
 
 app.use(express.json())
 app.use(cookieParser())
