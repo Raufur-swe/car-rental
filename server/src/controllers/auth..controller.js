@@ -150,7 +150,8 @@ export const authController = {
 
             return res.status(200).json({
                 success: true,
-                message: "OTP sent successfully."
+                message: "OTP sent successfully.",
+                otp // this only for demo  to alert in frontend
             });
         } catch (error) {
             //console.error(error);
