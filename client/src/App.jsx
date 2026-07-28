@@ -7,6 +7,12 @@ import Authlayouts from './layouts/Authlayouts'
 import RegisterPage from './pages/auth/RegisterPage'
 import Otppage from './pages/auth/OtpPage'
 import Loginpage from './pages/auth/LoginPage'
+import Ownerlayouts from './layouts/Ownerlayouts'
+import OwnerDashboard from './pages/owner/OwnerDashboard'
+import AllCars from './pages/owner/AllCars'
+import AddCar from './pages/owner/AddCar'
+import Revenue from './pages/owner/Revenue'
+import Status from './pages/owner/Status'
 
 const App = () => {
   return (
@@ -23,6 +29,18 @@ const App = () => {
         <Route path='/otp' element={<Otppage />} />
         <Route path='/login' element={<Loginpage />} />
 
+      </Route>
+
+
+
+      <Route path='/owner' element={<Ownerlayouts/>} >
+
+      <Route index element={<OwnerDashboard/>} />
+      <Route path='cars' element={<AllCars/>} />
+      <Route path='add-car' element={<AddCar/>} />
+      <Route path='revenue' element={<Revenue/>} />
+      <Route path='status' element={<Status/>} />
+      
       </Route>
 
 
