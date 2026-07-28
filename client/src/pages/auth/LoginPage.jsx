@@ -4,9 +4,11 @@ import { HiOutlineEye, HiOutlineEyeOff } from "react-icons/hi";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { loginUser } from "../../api/auth/authApi";
+import useAuth from "../../hooks/useAuth";
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const {login} = useAuth()
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -22,6 +24,7 @@ const LoginPage = () => {
       setLoading(true);
 
       const res = await loginUser(data);
+      login(res.user)
 
       toast.success(res.message);
 

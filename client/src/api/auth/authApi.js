@@ -14,14 +14,15 @@ export const verifyOtp = async (otpData)=>{
 
 export const loginUser = async (loginData)=>{
     const res = await api.post("/auth/login" , loginData)
+    return res.data
 }
 
 export const refreshToken = async () => {
-  const res = await axiosInstance.post("/auth/refresh");
+  const res = await api.post("/auth/refresh");
   return res.data;
 };
 
 export const logoutUser = async () => {
-  const res = await axiosInstance.post("/auth/logout");
+  const res = await api.post("/auth/logout");
   return res.data;
 };
